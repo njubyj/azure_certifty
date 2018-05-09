@@ -54,10 +54,11 @@ Please use a SSH client to connect AnyLink DA device.
 <a name="Build"></a>
 # Step 3: Build and Run the sample
 
-## 3.1 Build SDK and sample with cross compile toolchains 
-
 ***In this section, you should build the SDK and sample on the host PC(Ubuntu14.04), not on the device.***
 
+## 3.1 Build SDK with cross compile toolchains 
+
+### 3.1.1 Setiing up the building environment
 
 -   Install the prerequisite packages by issuing the following commands from the command line on the PC. Choose your commands based on the OS running on your PC.
 
@@ -73,7 +74,7 @@ Please use a SSH client to connect AnyLink DA device.
 
         cmake --version
 
--   Get cross compile toolchain:
+-   Get cross compile toolchain from [here][cross-compile-toolchain]
     
 -   Download the SDK to the board by issuing the following command:
 
@@ -82,11 +83,49 @@ Please use a SSH client to connect AnyLink DA device.
 -   Verify that you now have a copy of the source code under the
     directory ~/azure-iot-sdk-c.
 
+### 3.1.2 Setting up cmake to cross compile
 
--   Edit/Create the following file using any text editor of your choice (this file is necessary to cross build the SDK):
-		
+- See [Cross Compiling the Azure IoT Hub SDK][lnk-azure-iot-cross-compile] to learn how to cross compiling the Azure IoT Hub SDK. Here some important information.
+
+- In order to tell cmake that it is performing a cross compile we need to provide it with a toolchain file. To save us some typing and to make our whole procedure less dependent upon the current user we are going to export a value. Whilst in the directory of the cross compile toolchain enter the following command
+
+		cd [the installation path of cross compile toolchain]/4.5.1/arm-none-linux-gnueabi
+		export RPI_ROOT=$(pwd)
+
+- Edit/Create the following file using any text editor of your choice (this file is necessary to cross build the SDK):
+
 		azure-iot-sdk-c/build_all/linux/toolchain-arm.cmake
-		
+
+	- Insert the following lines to the file:
+
+			INCLUDE(CMakeForceCompiler)
+
+			SET(CMAKE_SYSTEM_NAME Linux)     # this one is important
+			#SET(CMAKE_SYSTEM_VERSION 1)     # this one not so much
+
+			# this is the location of the toolchain 
+			SET(CMAKE_C_COMPILER $ENV{RPI_ROOT}/../bin/arm-linux-gcc) 
+
+			# this is the file system root of the target
+			SET(CMAKE_FIND_ROOT_PATH $ENV{RPI_ROOT}/sys-root/)
+
+			SET(OPENSSL_ROOT_DIR $ENV{RPI_ROOT}/sys-root/usr/lib)
+			SET(OPENSSL_INCLUDE_DIR $ENV{RPI_ROOT}/sys-root/usr/include)
+
+			SET(CURL_ROOT_DIR $ENV{RPI_ROOT}/sys-root/usr/lib)
+			SET(CURL_INCLUDE_DIR $ENV{RPI_ROOT}/sys-root/usr/include)
+
+			SET(UUID_ROOT_DIR $ENV{RPI_ROOT}/sys-root/usr/lib)
+			SET(UUID_INCLUDE_DIR $ENV{RPI_ROOT}/sys-root/usr/include)
+
+			# search for programs in the build host directories
+			SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+
+			# for libraries and headers in the target directories
+			SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+			SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+	
+- See [Build the samples](#Step-3-2-Build) to learn how to build the samples.
 
 
 <a name="Step-3-2-Build"></a>
@@ -135,11 +174,12 @@ There are two samples one for sending messages to IoT Hub and another for receiv
 
 2. Follow same steps 1-7 as above to edit this sample.
 
-### 3.2.1 Build the samples:
+### 3.2.2 Build the samples:
 
 -   Build the SDK using following command. If you are facing any issues during build.
 
-        sudo ./azure-iot-sdk-c/build_all/linux/build.sh | tee LogFile.txt
+    	./azure-iot-sdk-c/build_all/linux/build.sh --toolchain-file ./azure-iot-sdk-c/build_all/linux/toolchain-rpi.cmake -cl --sysroot=$RPI_ROOT/sys-root | tee LogFile.txt
+
     
     ***Note:*** *LogFile.txt in above command should be replaced with a file name where build output will be written.*
     
@@ -152,14 +192,36 @@ There are two samples one for sending messages to IoT Hub and another for receiv
 In this section you will run the Azure IoT client SDK samples to validate
 communication between your device and Azure IoT Hub. You will send messages to the Azure IoT Hub service and validate that IoT Hub has successfully receive the data. You will also monitor any messages send from the Azure IoT Hub to client.
 
-### 3.3.1 Send Device Events to IOT Hub:
+### 3.3.1 Copy the built image to the device
+
+- Copy following files to AnyLink DA:
+
+		libraries:
+			libaziotsharedutil.a
+			libiothub_client_mqtt_ws_transport.a 
+			libiothub_client.a                    
+			libiothub_service_client.a
+			libiothub_client_amqp_transport.a     
+			libserializer.a
+			libiothub_client_amqp_ws_transport.a  
+			libuamqp.a
+			libiothub_client_http_transport.a     
+			libuhttp.a
+			libiothub_client_mqtt_transport.a     
+			libumqtt.a
+		
+		samples:
+			iothub_ll_telemetry_sample
+
+
+### 3.3.2 Send Device Events to IOT Hub:
 
 -   Run the sample by issuing following command.    
 
 		azure-iot-sdk-c/cmake/iotsdk_linux/iothub_client/samples/iothub_ll_telemetry_sample/iothub_ll_telemetry_sample
 
 
-### 3.3.2 Receive messages from IoT Hub
+### 3.3.3 Receive messages from IoT Hub
 
 -   Run the sample by issuing following command.
 
@@ -187,3 +249,5 @@ You have now learned how to run a sample application that collects sensor data a
 [setup-devbox-linux]: https://github.com/Azure/azure-iot-sdk-c/blob/master/doc/devbox_setup.md
 [lnk-setup-iot-hub]: ../../setup_iothub.md
 [lnk-manage-iot-hub]: ../../manage_iot_hub.md
+[lnk-azure-iot-cross-compile]: https://github.com/Azure/azure-iot-device-ecosystem/blob/master/iotcertification/templates/template-linux-c.md
+[cross-compile-toolchain]: http://www.anylink.io/d/arm-linux-gcc-4.5.1.tar.gz
