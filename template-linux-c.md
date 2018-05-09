@@ -83,7 +83,11 @@ Please use a SSH client to connect AnyLink DA device.
     directory ~/azure-iot-sdk-c.
 
 
--   
+-   Edit/Create the following file using any text editor of your choice (this file is necessary to cross build the SDK):
+		
+		azure-iot-sdk-c/build_all/linux/toolchain-arm.cmake
+		
+
 
 <a name="Step-3-2-Build"></a>
 ## 3.2 Build the samples
